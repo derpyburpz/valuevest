@@ -2,6 +2,8 @@
 
 # ValueVest Frontend
 # dependencies
+node_modules/
+valuevest_frontend/package-lock.json
 valuevest_frontend/node_modules/
 
 # Expo
@@ -45,6 +47,7 @@ valuevest_frontend/*.log
 valuevest_frontend/npm-debug.log*
 valuevest_frontend/yarn-debug.log*
 valuevest_frontend/yarn-error.log*
+*/migrations/*
 
 # Runtime data
 valuevest_frontend/pids
@@ -142,6 +145,8 @@ valuevest_frontend/*.sqlite
 
 # ValueVest Backend
 # Django #
+__pycache__/
+*.pyc
 valuevest_backend/*.log
 valuevest_backend/*.pot
 valuevest_backend/*.pyc
