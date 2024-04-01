@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TextInput, Button } from 'react-native-paper';
+import { TextInput, Button, Checkbox } from 'react-native-paper';
 import axios from 'axios';
 import { RootStackParamList } from '../../nav/nav_stack';
 import { useNavigation } from '@react-navigation/native';
@@ -11,7 +11,36 @@ import { API_BASE_URL, API_NEWS_KEY } from './../../config';
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'AppStack'>>();
+
+  useEffect(() => {
+    const checkRememberMe = async () => {
+      const rememberMeValue = await AsyncStorage.getItem('rememberMe');
+      if (rememberMeValue === 'true') {
+        const storedUsername = await AsyncStorage.getItem('username');
+        const storedPassword = await AsyncStorage.getItem('password');
+        if (storedUsername && storedPassword) {
+          setUsername(storedUsername);
+          setPassword(storedPassword);
+          setRememberMe(true);
+        }
+      }
+    };
+    checkRememberMe();
+  }, []);
+
+  useEffect(() => {
+    const checkKeepLoggedIn = async () => {
+      const keepLoggedInValue = await AsyncStorage.getItem('keepLoggedIn');
+      if (keepLoggedInValue === 'true') {
+        setKeepLoggedIn(true);
+        navigation.navigate('AppStack', { screen: 'Home' });
+      }
+    };
+    checkKeepLoggedIn();
+  }, []);
 
   const handleSignIn = async () => {
     try {
@@ -23,6 +52,20 @@ function Login() {
       await AsyncStorage.setItem('access', response.data.access);
       await AsyncStorage.setItem('refresh', response.data.refresh);
       await AsyncStorage.setItem('user_id', response.data.user_id.toString());
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberMe', 'true');
+        await AsyncStorage.setItem('username', username);
+        await AsyncStorage.setItem('password', password);
+      } else {
+        await AsyncStorage.removeItem('rememberMe');
+        await AsyncStorage.removeItem('username');
+        await AsyncStorage.removeItem('password');
+      }
+      if (keepLoggedIn) {
+        await AsyncStorage.setItem('keepLoggedIn', 'true');
+      } else {
+        await AsyncStorage.removeItem('keepLoggedIn');
+      }
       navigation.navigate('AppStack', { screen: 'Home' });
     } catch (error) {
       console.error(error);
@@ -66,6 +109,20 @@ function Login() {
         mode="outlined"
         placeholder="Password"
       />
+      <View style={LoginStyles.checkboxContainer}>
+        <Checkbox
+          status={rememberMe ? 'checked' : 'unchecked'}
+          onPress={() => setRememberMe(!rememberMe)}
+        />
+        <Button onPress={() => setRememberMe(!rememberMe)}>Remember Me</Button>
+      </View>
+      <View style={LoginStyles.checkboxContainer}>
+        <Checkbox
+          status={keepLoggedIn ? 'checked' : 'unchecked'}
+          onPress={() => setKeepLoggedIn(!keepLoggedIn)}
+        />
+        <Button onPress={() => setKeepLoggedIn(!keepLoggedIn)}>Keep Me Logged In</Button>
+      </View>
       <Button mode="contained" onPress={handleSignIn} style={LoginStyles.button}>
         Sign In
       </Button>
@@ -76,6 +133,14 @@ function Login() {
   );
 }
 
+Login.navigationOptions = {
+  headerShown: false,
+};
+
+Login.options = {
+  headerShown: false,
+};
+
 const LoginStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -83,6 +148,11 @@ const LoginStyles = StyleSheet.create({
     padding: 16,
   },
   input: {
+    marginBottom: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
   button: {
