@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, TouchableOpacity, Image } from 'react-native';
+import { Text, View, TouchableOpacity, Image, Linking } from 'react-native';
 import { API_BASE_URL, API_NEWS_KEY } from './../../config';
-import { Button } from 'react-native-paper';
+import { Button, Card, Title, Paragraph } from 'react-native-paper';
 import { Article } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -13,17 +13,15 @@ import Container from './../../components/atoms/container';
 import { containerStyle } from './../../components/styles/containerstyle';
 import NewsFilterModal from '../../components/molecules/newsfilter';
 
-
 const News = () => {
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [articles, setArticles] = useState<Article[]>([]);
-  const [stockType, setStockType] = useState('stocks');
   const [modalVisible, setModalVisible] = useState(false);
   const [filters, setFilters] = useState<string[]>([]);
+  const [manualSearch] = useState('');
 
   const openModal = () => {
     setModalVisible(true);
-  }
+  };
 
   const onApplyFilters = (selected: string[]) => {
     if (selected.includes('All')) {
@@ -34,74 +32,90 @@ const News = () => {
       setFilters(selected);
     }
     setModalVisible(false);
-  }
-  
-  <NewsFilterModal
-  visible={modalVisible}
-  onApply={onApplyFilters}
-  onClose={() => setModalVisible(false)} 
-  />
+  };
 
   const fetchNews = async () => {
     try {
-      const response = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          q: filters.length ? filters.join(',') : stockType,
-          language: 'en',
-          sortBy: 'relevancy',
-          apiKey: API_NEWS_KEY
-        }
-      });
-      setArticles(response.data.articles);
+      const defaultCategory = 'Technology';
+      const selectedCategories = filters.length ? filters : [defaultCategory];
+  
+      const params: Record<string, string> = {
+        language: 'en',
+        apiKey: API_NEWS_KEY,
+      };
+  
+      let apiEndpoint = 'https://newsapi.org/v2/top-headlines';
+  
+      if (manualSearch.trim() !== '') {
+        apiEndpoint = 'https://newsapi.org/v2/everything';
+        params.q = manualSearch.trim();
+        params.searchIn = 'title,description';
+      } else if (filters.length > 0) {
+        apiEndpoint = 'https://newsapi.org/v2/everything';
+        params.q = selectedCategories.join(' OR ');
+      } else {
+        params.category = defaultCategory;
+      }
+  
+      console.log('API Request Params:', params);
+  
+      const response = await axios.get(apiEndpoint, { params });
+  
+      if (response.data && response.data.articles) {
+        setArticles(response.data.articles);
+      } else {
+        console.log('No articles found in the API response.');
+        setArticles([]);
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching news:', error);
+      setArticles([]);
     }
   };
 
   useEffect(() => {
     fetchNews();
-  }, [filters]);
+  }, [filters, manualSearch]);
+
+  const openArticle = (url: string) => {
+    Linking.openURL(url);
+  };
 
   return (
     <>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
-      <Button onPress={openModal}>Open Filter</Button>
-      <Button onPress={() => setFilters([])}>Reset Filters</Button>
-    </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
+        <Button onPress={() => setFilters([])}>Reset Filters</Button>
+        <Button onPress={openModal}>Open Filter</Button>
+      </View>
 
-    {modalVisible && (
-      <NewsFilterModal
-        visible={modalVisible}
-        onApply={onApplyFilters}
-        onClose={() => setModalVisible(false)}
-      />
-    )}
+      {modalVisible && (
+        <NewsFilterModal visible={modalVisible} onApply={onApplyFilters} onClose={() => setModalVisible(false)} />
+      )}
 
-      <Container>
-        <ScrollView>
-          <View style={containerStyle.iconContainer}>
-            <View style={{ flex: 1, flexDirection: 'column' }}>
-              <View style={[containerStyle.iconContainer, { justifyContent: 'space-between' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="newspaper" size={24} color="black" style={containerStyle.icon}/>
-                  <Text style={containerStyle.containerTitle}>Top News</Text>
-                </View>
-              </View>
-              {articles.slice(0, 20).map((article, index) => (
-                <View key={index} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: '#D3D3D3' }}>
-                  {article.urlToImage && <Image source={{ uri: article.urlToImage }} style={{ width: 150, height: 150 }} />}
-                  <View style={{ flex: 2, marginLeft: 10, alignItems: 'stretch' }}>
-                    {article.title && <Text>{article.title}</Text>}
-                    {article.description && <Text>{article.description}</Text>}
-                    {article.source && article.source.name && <Text style={{ fontStyle: 'italic' }}>Source: {article.source.name}</Text>}
-                  </View>
-                  <View style={{ height: 10 }} />
-                </View>
-              ))}
+      <ScrollView>
+        <View style={containerStyle.iconContainer}>
+          <View style={{ flex: 1, flexDirection: 'column' }}>
+            <View style={[containerStyle.iconContainer, { justifyContent: 'space-between' }]}>      
             </View>
+            {articles.slice(0, 20).map((article, index) => (
+              <TouchableOpacity key={index} onPress={() => openArticle(article.url)}>
+                <Card style={{ marginBottom: 10, backgroundColor: '#FFFFFF' }}>
+                  <Card.Content>
+                    <Title>{article.title}</Title>
+                    {article.urlToImage && (
+                      <Card.Cover source={{ uri: article.urlToImage }} style={{ marginVertical: 10 }} />
+                    )}
+                    <Paragraph>{article.description}</Paragraph>
+                    {article.source && article.source.name && (
+                      <Text style={{ fontStyle: 'italic', marginTop: 5 }}>Source: {article.source.name}</Text>
+                    )}
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))}
           </View>
-        </ScrollView>
-      </Container>
+        </View>
+      </ScrollView>
     </>
   );
 };
