@@ -118,6 +118,7 @@ return (
         renderItem={renderStock}
         renderHiddenItem={renderHiddenItem}
         rightOpenValue={-75}
+        disableRightSwipe={true}
         previewRowKey={'0'}
         previewOpenValue={-40}
         previewOpenDelay={3000}

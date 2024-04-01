@@ -19,15 +19,15 @@ export const containerStyle = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 5,
     marginLeft: 10,
-    marginTop: 5,
+    marginTop: 10,
   },
   containerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginRight: 5,
-    marginLeft: 10,
-    marginTop: 5,
+    marginLeft: 15,
+    marginTop: 10,
     fontSize: 20,
     fontWeight: '600',
   },
@@ -41,13 +41,13 @@ export const containerStyle = StyleSheet.create({
   containerTextBold: {
     fontWeight: 'bold',
     fontSize: 35,
-    marginLeft: 10,
+    marginLeft: 15,
   },
   containerTextGreen: {
     color: 'limegreen',
     fontSize: 26,
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: 15,
     marginBottom: 10,
   },
   containerTextRed: {
@@ -58,8 +58,8 @@ export const containerStyle = StyleSheet.create({
     marginBottom: 10,
   },
   icon: {
-    marginLeft: 10,
-    marginTop: 5,
+    marginLeft: 15,
+    marginTop: 10,
   },
   iconRight: {
     alignSelf: 'flex-end',

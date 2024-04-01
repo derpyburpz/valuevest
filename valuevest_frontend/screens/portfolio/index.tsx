@@ -90,8 +90,8 @@ const Portfolio = () => {
     return (
       <View style={{ backgroundColor: 'white' }}>
         <DataTable.Row>
-          <DataTable.Cell style={{ color: 'black', flex: 4 }}>{data.item.company_name}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 2.5 }}>{data.item.price ? data.item.price.toFixed(2) : 'N/A'}</DataTable.Cell>
+          <DataTable.Cell style={{ color: 'black', flex: 6 }}>{data.item.company_name}</DataTable.Cell>
+          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.price ? data.item.price.toFixed(2) : 'N/A'}</DataTable.Cell>
           <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.shares ? data.item.shares.toString() : 'N/A'}</DataTable.Cell>
         </DataTable.Row>
       </View>
@@ -135,12 +135,25 @@ const Portfolio = () => {
   );
 
   return (
-    <Container>
+    <>
+      <Container key={refreshKey}>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refreshPortfolio}
+            />
+          }
+        >
+          <PortfolioValue key={refreshKey} />
+        </ScrollView>
+      </Container>
       <SwipeListView
         data={stocks}
         renderItem={renderStock}
         renderHiddenItem={renderHiddenItem}
         rightOpenValue={-75}
+        disableRightSwipe={true}
         previewRowKey={'0'}
         previewOpenValue={-40}
         previewOpenDelay={3000}
@@ -154,23 +167,19 @@ const Portfolio = () => {
         keyExtractor={(item) => item.key}
         ListHeaderComponent={
           <>
-            <PortfolioValue key={refreshKey} />
-            <View style={{ flex: 1, height: 1, backgroundColor: 'gray' }} />
+            <View style={{ flex: 1, height: 0.1, backgroundColor: 'white' }} />
             <DataTable>
               <DataTable.Header>
-                <DataTable.Title style={{ flex: 4 }}>Stock</DataTable.Title>
-                <DataTable.Title numeric style={{ flex: 2.5 }}>Last Price</DataTable.Title>
+                <DataTable.Title style={{ flex: 5 }}>Company</DataTable.Title>
+                <DataTable.Title numeric style={{ flex: 2 }}>Last Price</DataTable.Title>
                 <DataTable.Title numeric style={{ flex: 1 }}>Shares</DataTable.Title>
               </DataTable.Header>
             </DataTable>
           </>
         }
-        ListFooterComponent={
-          <>
-          </>
-        }
+        ListFooterComponent={<></>}
       />
-    </Container>
+    </>
   );
 };
 

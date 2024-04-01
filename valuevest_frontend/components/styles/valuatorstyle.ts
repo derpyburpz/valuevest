@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const valuatorstyles = StyleSheet.create({
+export const valuatorStyles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

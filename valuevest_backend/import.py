@@ -8,15 +8,10 @@ django.setup()
 from stocks.models import Stock
 
 def populate_stocks_from_excel(file_path):
-    # Read the first sheet of the Excel file
-    data_frame = pd.read_excel(file_path, sheet_name='Global alphabetical')
-
-    # Prepare a list to hold the Stock instances
     stocks = []
-
-    # Iterate over the rows in the DataFrame
+    data_frame = pd.read_excel(file_path, sheet_name='Global alphabetical')
+    
     for index, row in data_frame.iterrows():
-        # print(row)
         stock = Stock(
             company_name=row['Company Name'],
             exchange_ticker=row['Exchange:Ticker'],
@@ -39,10 +34,13 @@ def populate_stocks_from_excel(file_path):
             book_value_of_equity_per_share=row['Book Value of Equity Per Share'] if pd.notnull(row['Book Value of Equity Per Share']) else 0,
             discounted_excess_returns=row['Discounted Excess Returns (Terminal)'] if pd.notnull(row['Discounted Excess Returns (Terminal)']) else 0
         )
-        # Add the Stock instance to the list
+
         stocks.append(stock)
 
-    # Save all Stock instances to the database at once
+    # Save all Stock instances to the database at ONCE
     Stock.objects.bulk_create(stocks)
 
 populate_stocks_from_excel('C:\\Users\\jakec\\Desktop\\Mobile Apps\\valuevest_backend\\ind_fin_const.xlsx')
+
+
+
