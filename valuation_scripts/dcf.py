@@ -10,7 +10,8 @@ from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 from data_functions import get_first_numeric_value, get_first_two_numeric_values
 
-def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_sorted, xlsx, dfs, COST_OF_EQUITY, DCF_GROWTH_RATE, NUMBER_OF_YEARS, exchange_ticker, stock, filepath):
+def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_sorted, xlsx, \
+        dfs, COST_OF_EQUITY, DCF_GROWTH_RATE, NUMBER_OF_YEARS, exchange_ticker, stock, filepath):
     ### Calculating Average Operating Cash Flow (ocf) Margin ###
     past_revenues = None
     ocf = None
@@ -20,7 +21,8 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
         df = pd.read_excel(xlsx, sheet_name=2, index_col=0)
         ocf = df.loc['Operating Cash Flow'][:NUMBER_OF_YEARS][::-1]
 
-    if (past_revenues is None or past_revenues.isnull().any()) or (ocf is None or ocf.isnull().any()) or (past_revenues == 0).any() or (len(past_revenues) != len(ocf)):
+    if (past_revenues is None or past_revenues.isnull().any()) or (ocf is None or ocf.isnull().any()) or \
+        (past_revenues == 0).any() or (len(past_revenues) != len(ocf)):
         try:
             past_revenues = income_stmt.loc['Total Revenue'][::-1] / 1000000
             time.sleep(0.1)
@@ -158,7 +160,8 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
             time.sleep(0.1)
             pretax_income = income_stmt.at['Pretax Income', income_stmt[0]] / 1000000
             time.sleep(0.1)
-            if (tax_provision is not None and not math.isnan(tax_provision)) and (pretax_income is not None and not math.isnan(pretax_income)) and (pretax_income != 0 and tax_provision != 0):
+            if (tax_provision is not None and not math.isnan(tax_provision)) and (pretax_income is not None and \
+                not math.isnan(pretax_income)) and (pretax_income != 0 and tax_provision != 0):
                 tax_rate = tax_provision / pretax_income
         except Exception as e:
             if os.path.exists(filepath): 
@@ -168,8 +171,6 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     
     if tax_rate is None or math.isnan(tax_rate) or tax_rate == 0:
         raise Exception("Missing tax rate")
-    # else:
-    #     print(f"The tax rate is {tax_rate}")
 
     debt_weight = total_debt / (market_cap + total_debt)
     equity_weight = 1 - debt_weight
@@ -234,7 +235,8 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     print(f"The Terminal Value is {terminal_value}")
 
     # Discounting Terminal Value
-    discounted_terminal_value = terminal_value / ((1 + wacc) ** NUMBER_OF_YEARS)
+    forecasted_years = len(predicted_revenues)
+    discounted_terminal_value = terminal_value / ((1 + wacc) ** forecasted_years)
     print(f"The Discounted Terminal Value is {discounted_terminal_value}")
 
     ### Calculating the Enterprise Value ###
@@ -289,7 +291,7 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     else:
         worksheet.cell(row=next_row, column=5, value='DCF')
     worksheet.cell(row=next_row, column=6, value=wacc)
-    # worksheet.cell(row=next_row, column=6, value=discounted_FCFF)
+
     worksheet.cell(row=next_row, column=7, value=enterprise_value)
     worksheet.cell(row=next_row, column=8, value=equity_value)
     worksheet.cell(row=next_row, column=9, value=terminal_value)
@@ -300,3 +302,5 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
         f.write(symbol + '\n')
 
     return intrinsic_value_per_share
+
+    # worksheet.cell(row=next_row, column=6, value=discounted_FCFF)

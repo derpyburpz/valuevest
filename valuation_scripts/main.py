@@ -8,10 +8,10 @@ import time
 import math
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
+
 from dcf import dcf
 from erm import erm
 from data_functions import get_first_numeric_value, get_first_two_numeric_values
-
 
 ### DEFINITIONS & ASSUMPTIONS ###
 NUMBER_OF_YEARS = 10                    # Default historical number of years and DCF projection period
@@ -21,7 +21,8 @@ revenue_growth_threshold = 0.2          # Threshold for revenue growth rate
 reinvestment_rate_threshold = 0.5       # Threshold for reinvestment rate
 
 path = 'C:\\Users\\jakec\\OneDrive - Nanyang Technological University\\Work\\Year 4\\Final Year Project\\FINAL Report\\stockanalysis_all\\'
-ind_fin_const = pd.read_excel('C:\\Users\\jakec\\OneDrive - Nanyang Technological University\\Work\\Year 4\\Final Year Project\\FINAL Report\\ind_fin_const.xls', sheet_name=0)
+ind_fin_const = pd.read_excel('C:\\Users\\jakec\\OneDrive - Nanyang Technological University\\Work\\Year 4\\Final Year Project\\\
+                              FINAL Report\\ind_fin_const.xls', sheet_name=0)
 
 # Iterate over every row in the ind_fin_const DataFrame
 for exchange_ticker in ind_fin_const['Exchange:Ticker']:
@@ -33,15 +34,7 @@ for exchange_ticker in ind_fin_const['Exchange:Ticker']:
 
     print(f"Processing the following ticker: {exchange_ticker}.")
     time.sleep(0.1)
-    # TESTING #
-    # exchange_ticker = 'NYSE:GS'
-    # exchange_ticker = 'NasdaqGS:GOOGL'
-    # exchange_ticker = 'NasdaqGS:AAPL'
-    # exchange_ticker = 'NYSE:JPM'
-    # exchange_ticker = 'NYSE:ATEN'
-    # exchange_ticker = 'NasdaqGS:MSFT'
-    # exchange_ticker = 'NYSEAM:EFSH'
-    ###########
+
     processed_symbols = set(line.strip() for line in open('processed.log'))
     missing_data_symbols = set(line.split(' ')[4] for line in open('missing_data.log'))
     try:
@@ -286,7 +279,6 @@ for exchange_ticker in ind_fin_const['Exchange:Ticker']:
 
 
             ### Determining model based on company stage and type ###
-            # if ((average_revenue_growth is not None and average_revenue_growth > revenue_growth_threshold) and (reinvestment_rate is not None and reinvestment_rate > reinvestment_rate_threshold)) or fin_firm:
             if fin_firm:
                 # Is a financial firm, determine whether the company is in the growth stage or mature stage  
                 if (average_revenue_growth is not None and average_revenue_growth <= revenue_growth_threshold) and (reinvestment_rate is not None and reinvestment_rate <= reinvestment_rate_threshold):
