@@ -54,19 +54,19 @@ const Valuator = () => {
           {stocks.map((stock, index) => {
             let [name] = stock.company_name.split('(');
             return (
-              <Card key={index} style={{ margin: 10, backgroundColor: 'white', borderColor: 'white' }} elevation={0}>
-                <Card.Title title={`${stock.count}. ${name}`} titleStyle={{ fontSize: 25, paddingTop: 15, color: '#74278E' }} />
+              <Card key={index} style={{ margin: 10, backgroundColor: '#FFFFFF', borderColor: 'white' }} elevation={0}>
+                <Card.Title title={`${stock.count}. ${name}`} titleStyle={{ fontSize: 24, paddingTop: 15, color: '#74278E', fontWeight: 'bold' }} />
                 <Card.Content>
-                  <Title>Stock Performance Forecast</Title>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Intrinsic Value:  <Text style={{ fontWeight: 'bold', color: '#74278E', fontSize: 25 }}>${stock.intrinsic_value}</Text></Paragraph>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Growth:  <Text style={{ fontWeight: 'bold', fontSize: 19, color: '#000000' }}>{stock.price_change}%</Text></Paragraph>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Model:  <Text style={{ fontWeight: 'bold', fontSize: 19, color: '#000000' }}>{stock.model}</Text></Paragraph>
+                  <Title style={{ fontSize: 15 }}>Stock Performance Forecast</Title>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Intrinsic Value:  <Text style={{ fontWeight: 'bold', color: '#74278E', fontSize: 20 }}>${stock.intrinsic_value}</Text></Paragraph>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Growth Potential:  <Text style={{ fontWeight: 'bold', fontSize: 20, color: '#000000' }}>{stock.price_change}%</Text></Paragraph>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Model:  <Text style={{ fontWeight: 'bold', fontSize: 17, color: '#000000' }}>{stock.model}</Text></Paragraph>
                   <Divider style={{ marginVertical: 10 }}/>
-                  <Title>Stock Information</Title>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Current Price:  <Text style={{ fontWeight: 'bold', color: '#74278E', fontSize: 22 }}>${stock.latest_price}</Text></Paragraph>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Exchange Ticker:  <Text style={{ fontWeight: 'bold', fontSize: 19, color: '#000000' }}>{stock.exchange_ticker}</Text></Paragraph>
-                  <Paragraph style={{ paddingTop: 10, fontSize: 16, color: '#606060' }}>Country:  <Text style={{ fontWeight: 'bold', fontSize: 19, color: '#000000' }}>{stock.country}</Text></Paragraph>
-                  <Paragraph style={{ paddingTop: 10 }}>Industry Group:  <Text style={{ fontWeight: 'bold', fontSize: 19, color: '#000000' }}>{stock.industry_group}</Text></Paragraph>
+                  <Title style={{ fontSize: 15 }}>Stock Information</Title>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Current Price:  <Text style={{ fontWeight: 'bold', color: '#74278E', fontSize: 20 }}>${stock.latest_price}</Text></Paragraph>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Exchange Ticker:  <Text style={{ fontWeight: 'bold', fontSize: 17, color: '#000000' }}>{stock.exchange_ticker}</Text></Paragraph>
+                  <Paragraph style={{ paddingTop: 10, fontSize: 14, color: '#606060' }}>Country:  <Text style={{ fontWeight: 'bold', fontSize: 17, color: '#000000' }}>{stock.country}</Text></Paragraph>
+                  <Paragraph style={{ paddingTop: 10 }}>Industry Group:  <Text style={{ fontWeight: 'bold', fontSize: 17, color: '#000000' }}>{stock.industry_group}</Text></Paragraph>
                 </Card.Content>
             </Card>
           );

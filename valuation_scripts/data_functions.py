@@ -9,7 +9,6 @@ import math
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 
-
 def get_first_numeric_value(dfs, sheet_index, row_name):
     df = dfs[sheet_index]
     row_values = df.loc[row_name]

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { Text, View, TouchableOpacity, Image, RefreshControl, Linking } from 'react-native';
+import { Button, Card, Title, Paragraph, Divider } from 'react-native-paper';
 import { API_BASE_URL, API_NEWS_KEY } from './../../config';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,23 +11,17 @@ import { RootStackParamList } from '../../nav/nav_stack';
 import Container from './../../components/atoms/container';
 import PortfolioValue from '../../components/organisms/portfoliovalue';
 import { containerStyle } from './../../components/styles/containerstyle';
-// import { Article } from '../../types';
-
-
-interface Article {
-  urlToImage: string;
-  title: string;
-  description: string;
-  source: {
-    name: string;
-  };
-}
+import { Article, SettingsProps } from './../../types';
+import Settings from '../../components/molecules/settings';
 
 const Home = () => {
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [articles, setArticles] = useState<Article[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  const openArticle = (url: string) => {
+    Linking.openURL(url);
+  };
 
   const onRefresh = React.useCallback(() => {
     setRefreshKey(prevKey => prevKey + 1);
@@ -36,13 +31,12 @@ const Home = () => {
     try {
       const response = await axios.get('https://newsapi.org/v2/everything', {
         params: {
-          q: 'business OR finance',
-          apiKey: API_NEWS_KEY
-        }
+          q: 'stocks',
+          apiKey: API_NEWS_KEY,
+        },
       });
       setArticles(response.data.articles);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
     }
   };
 
@@ -54,42 +48,38 @@ const Home = () => {
     <>
       <ScrollView
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <Container>
           <PortfolioValue key={refreshKey} />
         </Container>
-
-        <Container>
-          <View style={containerStyle.iconContainer}>
-            <View style={{ flex: 1, flexDirection: 'column' }}>
-              <View style={[containerStyle.iconContainer, { justifyContent: 'space-between' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="newspaper" size={24} color="black" style={containerStyle.icon}/>
-                  <Text style={containerStyle.containerTitle}>Top Portfolio News</Text>
-                </View>
-                <TouchableOpacity onPress={() => navigation.navigate('News')}>
-                  <Ionicons name="arrow-forward" size={24} color="black" style={containerStyle.iconRight}/>
-                </TouchableOpacity>
-              </View>
-              {articles.slice(0, 20).map((article, index) => (
-                <View key={index} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: '#D3D3D3' }}>
-                  {article.urlToImage && <Image source={{ uri: article.urlToImage }} style={{ width: 150, height: 150 }} />}
-                  <View style={{ flex: 2, marginLeft: 10, alignItems: 'stretch' }}>
-                    {article.title && <Text>{article.title}</Text>}
-                    {article.description && <Text>{article.description}</Text>}
-                    {article.source && article.source.name && <Text style={{ fontStyle: 'italic' }}>Source: {article.source.name}</Text>}
-                  </View>
-                  <View style={{ height: 10 }} />
-                </View>
-              ))}
+        <Card style={{ marginHorizontal: 10, marginBottom: 10, backgroundColor: '#FFFFFF' }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+              <Ionicons name="newspaper-outline" size={24} color="black" style={{ marginRight: 10 }} />
+              <Title style={{ fontWeight: 'bold' }}>Trending Market News</Title>
             </View>
-          </View>
-        </Container>
+            <Divider style={{ marginVertical: 6 }} />
+            {articles.slice(0, 20).map((article, index) => (
+              <TouchableOpacity key={index} onPress={() => openArticle(article.url)}>
+                <View style={{ marginBottom: 20 }}>
+                  <Title>{article.title}</Title>
+                  {article.urlToImage && (
+                    <Card.Cover source={{ uri: article.urlToImage }} style={{ marginVertical: 10 }} />
+                  )}
+                  <Paragraph>{article.description}</Paragraph>
+                  {article.source && article.source.name && (
+                    <Text style={{ fontStyle: 'italic', marginTop: 5 }}>Source: {article.source.name}</Text>
+                  )}
+                </View>
+                {index !== articles.length - 1 && (
+                  <View style={{ height: 1, backgroundColor: '#E0E0E0', marginBottom: 20 }} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </Card.Content>
+        </Card>
       </ScrollView>
     </>
   );

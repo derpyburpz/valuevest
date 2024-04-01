@@ -25,7 +25,7 @@ type ListItemProps = {
   handleAdd: (item: any) => () => void
 };
 
-const AddTickerModal: React.FC<AddTickerProps> = ({ visible, onApply, onClose }) => {
+const AddTickerModal: React.FC<AddTickerProps> = ({ visible, onClose }) => {
   const [stocks, setStocks] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
