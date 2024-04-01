@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
 from django.db.models import Count
 import yfinance as yf
+import math, time
 
 logger = logging.getLogger(__name__)
 
@@ -37,39 +38,24 @@ class StockViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def get_duplicate_stocks(self, request):
-        # We group by the fields that define uniqueness for us
         fields = ['company_name', 'exchange_ticker', 'industry_group', 'primary_sector', 'sic_code', 'country', 'broad_group', 'cost_of_capital']
-        
-        # We annotate each group with the count of items in that group
         duplicates = Stock.objects.values(*fields).annotate(count=Count('id')).filter(count__gt=1)
-        
-        # Create a list to store the results
         results = []
 
-        # Iterate over each duplicate group
         for duplicate in duplicates:
-            # Get the ids of the stocks in the current duplicate group
             ids = Stock.objects.filter(**{field: duplicate[field] for field in fields}).values_list('id', flat=True)
-
-            # Add the ids to the duplicate dictionary
             duplicate['ids'] = list(ids)
-
-            # Add the duplicate dictionary to the results list
             results.append(duplicate)
 
-        # Return the results as a response
         return Response(results)
 
     @action(detail=False, methods=['get'])
     def get_stock_by_id(self, request):
-        # Get the 'id' from the query parameters
         stock_id = request.query_params.get('id', None)
 
         if stock_id is not None:
-            # Get the stock with the given id
             stock = get_object_or_404(Stock, id=stock_id)
 
-            # Create a dictionary with the stock's details
             stock_details = {
                 'id': stock.id,
                 'company_name': stock.company_name,
@@ -79,7 +65,7 @@ class StockViewSet(viewsets.ModelViewSet):
                 'sic_code': stock.sic_code,
                 'country': stock.country,
                 'broad_group': stock.broad_group,
-                'cost_of_capital': str(stock.cost_of_capital),  # Convert Decimal to string for JSON serialization
+                'cost_of_capital': str(stock.cost_of_capital),
             }
 
             return Response(stock_details)
@@ -88,7 +74,6 @@ class StockViewSet(viewsets.ModelViewSet):
         
     @action(detail=False, methods=['get'])
     def get_stock_by_company_name(self, request):
-        # Get the 'company_name' from the query parameters
         exchange_ticker = request.query_params.get('exchange_ticker', None)
 
         if exchange_ticker is not None:
@@ -414,10 +399,8 @@ class StockViewSet(viewsets.ModelViewSet):
         model = request.query_params.get('model', None)
         exchange = request.query_params.get('exchange', None)
 
-        # Start with all stocks
         stocks = Stock.objects.all()
 
-        # Filter by the provided attributes
         if industry_group is not None:
             stocks = stocks.filter(industry_group=industry_group)
         if country is not None:
@@ -466,3 +449,193 @@ class StockViewSet(viewsets.ModelViewSet):
 
         return Response(over_under_valued_stocks)
     
+    @action(detail=False, methods=['get'])
+    def get_stock_details(self, request):
+        ticker = request.query_params.get('ticker', None)
+        if ticker is None:
+            return Response({'error': 'Ticker parameter missing.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        symbol = ticker.split(':')[1].strip().upper()
+
+        print(f"Ticker is: {ticker}.")
+        print(f"Symbol is: {symbol}.")
+
+        try:
+            stock_model = get_object_or_404(Stock, exchange_ticker=ticker)
+            yf_stock = yf.Ticker(symbol)
+
+            income_stmt = yf_stock.financials
+            balance_sheet = yf_stock.balance_sheet
+            cashflow_stmt = yf_stock.cashflow
+
+            try:
+                net_income = income_stmt.at['Net Income', income_stmt.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                net_income = "Not found"
+
+            try:
+                shareholders_equity = balance_sheet.at['Stockholders Equity', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                shareholders_equity = "Not found"
+
+            roe = net_income / shareholders_equity if (net_income != "Not found") and (shareholders_equity != "Not found") else "Not found"
+
+            try:
+                total_assets = balance_sheet.at['Total Assets', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                total_assets = "Not found"
+
+            try:
+                total_liabilities = balance_sheet.at['Total Liabilities Net Minority Interest', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                total_liabilities = "Not found"
+
+            total_book_value_equity = total_assets - total_liabilities if (total_assets != "Not found") and (total_liabilities != "Not found") else "Not found"
+
+            try:
+                shares_outstanding = yf_stock.info['sharesOutstanding'] / 1000000
+                time.sleep(0.1)
+            except:
+                shares_outstanding = "Not found"
+
+            try:
+                stock_price = yf_stock.info['currentPrice']
+            except:
+                stock_price = "Not found"
+
+            market_cap = stock_price * shares_outstanding if (stock_price != "Not found") and (shares_outstanding != "Not found") and not math.isnan(shares_outstanding) and shares_outstanding != 0 else "Not found"
+
+            try:
+                total_debt = balance_sheet.at['Total Debt', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                total_debt = "Not found"
+
+            try:
+                enterprise_value = yf_stock.info['enterpriseValue'] / 1000000
+                time.sleep(0.1)
+            except:
+                enterprise_value = "Not found"
+
+            try:
+                revenue = income_stmt.at['Total Revenue', income_stmt.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                revenue = "Not found"
+
+            try:
+                ebitda = yf_stock.info['ebitda'] / 1000000
+                time.sleep(0.1)
+            except:
+                ebitda = "Not found"
+
+            try:
+                ebit = income_stmt.at['Ebit', income_stmt.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                ebit = "Not found"
+
+            try:
+                free_cash_flow = cashflow_stmt.at['Free Cash Flow', cashflow_stmt.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                free_cash_flow = "Not found"
+
+            try:
+                operating_cash_flow = cashflow_stmt.at['Total Cash From Operating Activities', cashflow_stmt.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                operating_cash_flow = "Not found"
+
+            try:
+                current_assets = balance_sheet.at['Total Current Assets', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                current_assets = "Not found"
+
+            try:
+                current_liabilities = balance_sheet.at['Total Current Liabilities', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                current_liabilities = "Not found"
+
+            try:
+                inventory = balance_sheet.at['Inventory', balance_sheet.columns[0]] / 1000000
+                time.sleep(0.1)
+            except:
+                inventory = "Not found"
+
+            try:
+                invested_capital = total_assets - current_liabilities if (total_assets != "Not found") and (current_liabilities != "Not found") else "Not found"
+            except:
+                invested_capital = "Not found"
+
+            try:
+                earnings_yield = yf_stock.info['earningsYield']
+                time.sleep(0.1)
+            except:
+                earnings_yield = "Not found"
+
+            try:
+                dividend_yield = yf_stock.info['dividendYield']
+                time.sleep(0.1)
+            except:
+                dividend_yield = "Not found"
+
+            try:
+                payout_ratio = yf_stock.info['payoutRatio']
+                time.sleep(0.1)
+            except:
+                payout_ratio = "Not found"
+
+            try:
+                buyback_yield = yf_stock.info['buybackYield']
+                time.sleep(0.1)
+            except:
+                buyback_yield = "Not found"
+
+            stock_details = {
+                'company_name': stock_model.company_name,
+                'exchange_ticker': stock_model.exchange_ticker,
+                'sector': stock_model.primary_sector,
+                'industry_group': stock_model.industry_group,
+                'country': stock_model.country,
+                'current_price': float(yf_stock.info['previousClose']),
+                'high_price': yf_stock.info.get('dayHigh', "Not found"),
+                'low_price': yf_stock.info.get('dayLow', "Not found"),
+                'market_cap': market_cap,
+                'pe_ratio': yf_stock.info.get('trailingPE', "Not found"),
+                'ps_ratio': market_cap / revenue if (market_cap != "Not found") and (revenue != "Not found") else "Not found",
+                'pb_ratio': market_cap / total_book_value_equity if (market_cap != "Not found") and (total_book_value_equity != "Not found") else "Not found",
+                'p_fcf_ratio': market_cap / free_cash_flow if (market_cap != "Not found") and (free_cash_flow != "Not found") else "Not found",
+                'p_ocf_ratio': market_cap / operating_cash_flow if (market_cap != "Not found") and (operating_cash_flow != "Not found") else "Not found",
+                'ev_revenue': enterprise_value / revenue if (enterprise_value != "Not found") and (revenue != "Not found") else "Not found",
+                'ev_ebitda': enterprise_value / ebitda if (enterprise_value != "Not found") and (ebitda != "Not found") else "Not found",
+                'ev_ebit': enterprise_value / ebit if (enterprise_value != "Not found") and (ebit != "Not found") else "Not found",
+                'ev_fcf': enterprise_value / free_cash_flow if (enterprise_value != "Not found") and (free_cash_flow != "Not found") else "Not found",
+                'debt_equity': total_debt / shareholders_equity if (total_debt != "Not found") and (shareholders_equity != "Not found") else "Not found",
+                'debt_ebitda': total_debt / ebitda if (total_debt != "Not found") and (ebitda != "Not found") else "Not found",
+                'debt_fcf': total_debt / free_cash_flow if (total_debt != "Not found") and (free_cash_flow != "Not found") else "Not found",
+                'quick_ratio': (current_assets - inventory) / current_liabilities if (current_assets != "Not found") and (inventory != "Not found") and (current_liabilities != "Not found") else "Not found",
+                'current_ratio': current_assets / current_liabilities if (current_assets != "Not found") and (current_liabilities != "Not found") else "Not found",
+                'asset_turnover': revenue / total_assets if (revenue != "Not found") and (total_assets != "Not found") else "Not found",
+                'return_on_equity': roe,
+                'return_on_assets': net_income / total_assets if (net_income != "Not found") and (total_assets != "Not found") else "Not found",
+                'return_on_invested_capital': net_income / invested_capital if (net_income != "Not found") and (invested_capital != "Not found") else "Not found",
+                'earnings_yield': earnings_yield,
+                'free_cash_flow_yield': free_cash_flow / market_cap if (free_cash_flow != "Not found") and (market_cap != "Not found") else "Not found",
+                'dividend_yield': dividend_yield,
+                'payout_ratio': payout_ratio,
+                'buyback_yield': buyback_yield,
+                'total_return': (stock_price + dividend_yield) / stock_price - 1 if (stock_price != "Not found") and (dividend_yield != "Not found") else "Not found",
+            }
+
+            return Response(stock_details)
+
+        except Exception as e:
+            print(f"Error fetching {ticker} details: {e}")
+            return Response({'error': 'Failed to fetch stock details.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
