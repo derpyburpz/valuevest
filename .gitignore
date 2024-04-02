@@ -47,7 +47,7 @@ valuevest_frontend/*.log
 valuevest_frontend/npm-debug.log*
 valuevest_frontend/yarn-debug.log*
 valuevest_frontend/yarn-error.log*
-*/migrations/*
+valuevest_backend/stocks/migrations/
 
 # Runtime data
 valuevest_frontend/pids
@@ -205,3 +205,4 @@ valuevest_backend/*.sublime-workspace
 
 # VS Code #
 valuevest_backend/.vscode/
+.expo/README.md
