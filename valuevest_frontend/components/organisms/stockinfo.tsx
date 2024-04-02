@@ -1,1 +1,0 @@
-// Detail Stock Information
