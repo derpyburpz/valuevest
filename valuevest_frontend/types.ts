@@ -75,6 +75,7 @@ export type Stock = {
   count: number;
   price_change: number;
   latest_price: number;
+  shares: number;
   key: string;
 };
 

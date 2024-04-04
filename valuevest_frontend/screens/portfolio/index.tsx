@@ -38,7 +38,7 @@ const Portfolio = () => {
         key: stock.exchange_ticker,
         company_name: stock.company_name,
         exchange_ticker: stock.exchange_ticker,
-        price: stock.price,
+        latest_price: stock.latest_price,
         shares: stock.shares
       })));
     } catch (error) {
@@ -91,7 +91,7 @@ const Portfolio = () => {
       <View style={{ backgroundColor: 'white' }}>
         <DataTable.Row>
           <DataTable.Cell style={{ color: 'black', flex: 6 }}>{data.item.company_name}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.price ? data.item.price.toFixed(2) : 'N/A'}</DataTable.Cell>
+          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.latest_price ? data.item.latest_price.toFixed(2) : 'N/A'}</DataTable.Cell>
           <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.shares ? data.item.shares.toString() : 'N/A'}</DataTable.Cell>
         </DataTable.Row>
       </View>

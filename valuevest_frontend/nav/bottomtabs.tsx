@@ -30,9 +30,6 @@ const BottomTabs = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [searchStockModalVisible, setSearchStockModalVisible] = useState(false);
 
-  const handleApply = () => {
-  }
-
   const handleWatchlistClose = () => {
     setTickerModalVisible(false);
     setWatchlistKey(Math.random());   // Refresh watchlist on modal close
@@ -49,6 +46,12 @@ const BottomTabs = () => {
 
   const handleSearchStockClose = () => {
     setSearchStockModalVisible(false);
+  }
+
+  const handleApply = () => {
+  }
+
+  const ApplySettings = () => {
   }
 
   return (

@@ -30,7 +30,7 @@ const Watchlist = () => {
         key: stock.exchange_ticker,
         company_name: stock.company_name,
         exchange_ticker: stock.exchange_ticker,
-        price: stock.price
+        latest_price: stock.latest_price
       })));
     } catch (error) {
       console.error(error);
@@ -69,7 +69,7 @@ const Watchlist = () => {
       <View style={{ backgroundColor: 'white' }}>
         <DataTable.Row>
           <DataTable.Cell style={{ color: 'black', flex: 3.5 }}>{data.item.company_name}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.price.toFixed(2)}</DataTable.Cell>
+          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.latest_price.toFixed(2)}</DataTable.Cell>
         </DataTable.Row>
       </View>
     );

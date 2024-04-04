@@ -140,11 +140,11 @@ class StockViewSet(viewsets.ModelViewSet):
                     hist = stock.history(period="1d")
 
                     if not hist.empty and 'Close' in hist.columns:
-                        current_price = float(hist['Close'].iloc[0])
+                        latest_price = float(hist['Close'].iloc[0])
                         
                         watchlist_data.append({
                         'company_name': item.stock.company_name,
-                        'price': current_price,
+                        'latest_price': latest_price,
                         'exchange_ticker': item.stock.exchange_ticker  
                         })
 
@@ -216,13 +216,13 @@ class StockViewSet(viewsets.ModelViewSet):
                 hist = stock.history(period="1d")
 
                 if not hist.empty and 'Close' in hist.columns:
-                    current_price = float(hist['Close'].iloc[0])
+                    latest_price = float(hist['Close'].iloc[0])
                     
                     portfolio_data.append({
                         'company_name': item.stock.company_name,
                         'exchange_ticker': item.stock.exchange_ticker,
                         'shares': item.shares,
-                        'price': current_price
+                        'latest_price': latest_price
                     })
 
             except Exception as e:
@@ -457,9 +457,6 @@ class StockViewSet(viewsets.ModelViewSet):
         
         symbol = ticker.split(':')[1].strip().upper()
 
-        print(f"Ticker is: {ticker}.")
-        print(f"Symbol is: {symbol}.")
-
         try:
             stock_model = get_object_or_404(Stock, exchange_ticker=ticker)
             yf_stock = yf.Ticker(symbol)
@@ -620,7 +617,8 @@ class StockViewSet(viewsets.ModelViewSet):
                 'debt_equity': total_debt / shareholders_equity if (total_debt != "Not found") and (shareholders_equity != "Not found") else "Not found",
                 'debt_ebitda': total_debt / ebitda if (total_debt != "Not found") and (ebitda != "Not found") else "Not found",
                 'debt_fcf': total_debt / free_cash_flow if (total_debt != "Not found") and (free_cash_flow != "Not found") else "Not found",
-                'quick_ratio': (current_assets - inventory) / current_liabilities if (current_assets != "Not found") and (inventory != "Not found") and (current_liabilities != "Not found") else "Not found",
+                'quick_ratio': (current_assets - inventory) / current_liabilities if (current_assets != "Not found") and (inventory != "Not found") and \
+                                (current_liabilities != "Not found") else "Not found",
                 'current_ratio': current_assets / current_liabilities if (current_assets != "Not found") and (current_liabilities != "Not found") else "Not found",
                 'asset_turnover': revenue / total_assets if (revenue != "Not found") and (total_assets != "Not found") else "Not found",
                 'return_on_equity': roe,
