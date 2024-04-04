@@ -73,21 +73,8 @@ function Login() {
     }
   };
 
-  const handleSignUp = async () => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/users/signup/`, {
-        username: username,
-        password: password,
-      });
-      console.log(response.data);
-      await AsyncStorage.setItem('access', response.data.access);
-      await AsyncStorage.setItem('refresh', response.data.refresh);
-      await AsyncStorage.setItem('user_id', response.data.user_id.toString());
-      navigation.navigate('AuthStack', { screen: 'Login' });
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to sign up. Please check your network connection and try again.');
-    }
+  const handleSignUp = () => {
+    navigation.navigate('AuthStack', { screen: 'Signup' });
   };
 
   return (

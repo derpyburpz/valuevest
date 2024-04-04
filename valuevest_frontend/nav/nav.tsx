@@ -10,6 +10,7 @@ import News from './../screens/news/index';
 import Watchlist from './../screens/watchlist/index';
 import Profile from './../screens/profile/index';
 import Login from './../screens/login/index';
+import Signup from './../screens/signup/index';
 import AuthSplash from './../screens/authsplash/index';
 import BottomTabs from './bottomtabs';
 import AddTickerModal from './../components/molecules/addticker';
@@ -22,6 +23,11 @@ const AuthStack = () => (
       name="Login" 
       component={Login} 
       options={{ title: 'Login' }}
+    />
+    <Stack.Screen 
+      name="Signup" 
+      component={Signup} 
+      options={{ title: 'Registration' }}
     />
   </Stack.Navigator>
 );
