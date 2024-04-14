@@ -15,14 +15,14 @@ import { Stock } from './../../types';
 
 const Valuator = () => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [filters, setFilters] = useState<{ industry_group?: string; model?: string; country?: string }>({});
+  const [filters, setFilters] = useState<{ industry_group?: string; model?: string; country?: string; exchange?:string }>({});
   const [stocks, setStocks] = useState<Stock[]>([]);
 
   const openModal = () => {
     setModalVisible(true);
   }
 
-  const onApplyFilters = (selected: { industryGroup?: string; model?: string; country?: string }) => {
+  const onApplyFilters = (selected: { industryGroup?: string; model?: string; country?: string; exchange?:string }) => {
     setFilters(selected);
     setModalVisible(false);
   }

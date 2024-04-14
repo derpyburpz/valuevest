@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Modal, ScrollView, Pressable } from 'react-native';
 import { Text, Button, Checkbox, Menu, Provider, Divider, Searchbar } from 'react-native-paper';
 import { API_BASE_URL, API_NEWS_KEY } from './../../config';
-import { valuatorstyles } from './../../components/styles/valuatorstyle';
+import { valuatorStyles } from './../../components/styles/valuatorstyle';
+import { set } from 'lodash';
 
 interface FilterModalProps {
   visible: boolean;
-  onApply: (filters: { industry_group?: string; model?: string; country?: string }) => void; 
+  onApply: (filters: { industry_group?: string; model?: string; country?: string; exchange?:string }) => void; 
   onClose: () => void;
 }
 
@@ -15,19 +16,31 @@ const ValuatorFilterModal: React.FC<FilterModalProps> = ({ visible, onApply, onC
   const [industry_group, setIndustryGroup] = useState<string>();
   const [model, setModel] = useState<string>();
   const [country, setCountry] = useState<string>();
+  const [exchange, setExchange] = useState<string>();
 
   const [industryGroupSearchQuery, setIndustryGroupSearchQuery] = useState('');
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
+  const [exchangeSearchQuery, setExchangeSearchQuery] = useState('');
 
   const [showIndustryGroupDropdown, setShowIndustryGroupDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showExchangeDropdown, setShowExchangeDropdown] = useState(false);
 
   const onResetFilters = () => {
+    setIndustryGroup(undefined);
+    setModel(undefined);
+    setCountry(undefined);
+    setExchange(undefined);
     setShowIndustryGroupDropdown(false);
     setShowModelDropdown(false);
     setShowCountryDropdown(false);
+    setShowExchangeDropdown(false);
+    setIndustryGroupSearchQuery('');
+    setModelSearchQuery('');
+    setCountrySearchQuery('');
+    setExchangeSearchQuery('');
   };
 
   const industryGroups = [
@@ -333,6 +346,39 @@ const ValuatorFilterModal: React.FC<FilterModalProps> = ({ visible, onApply, onC
     'Zimbabwe'
   ];
   
+  const exchanges = [
+    'NYSE',
+    'NasdaqGS',
+    'NasdaqGM',
+    'LSE',
+    'OTCPK',
+    'NYSEAM',
+    'NasdaqCM',
+    'SEHK',
+    'AMEX',
+    'OTC',
+    'TSX',
+    'TSXV',
+    'ASX',
+    'NZX',
+    'Euronext',
+    'SIX',
+    'HKEX',
+    'TSE',
+    'SSE',
+    'SZSE',
+    'WBAG',
+    'BSE',
+    'NSE',
+    'JSE',
+    'BM&F Bovespa',
+    'MOEX',
+    'BIST',
+    'BCBA',
+    'BCS',
+    'BVC',
+  ];
+
   return (
     <Provider>
       <Modal visible={visible} animationType="slide">
@@ -416,6 +462,33 @@ const ValuatorFilterModal: React.FC<FilterModalProps> = ({ visible, onApply, onC
             </View>
           )}
 
+          <Divider style={{ marginVertical: 10 }} />
+
+          <Button onPress={() => setShowExchangeDropdown(!showExchangeDropdown)}>
+            Exchange: {exchange || 'Select'}
+          </Button>
+          {showExchangeDropdown && (
+            <View style={{ marginTop: 10 }}>
+              <Searchbar
+                placeholder="Search"
+                onChangeText={setExchangeSearchQuery}
+                value={exchangeSearchQuery}
+              />
+              {exchanges.filter(exchange => exchange.includes(exchangeSearchQuery)).map((exchange) => (
+                <Pressable
+                  key={exchange}
+                  onPress={() => {
+                    setExchange(exchange);
+                    setShowExchangeDropdown(false);
+                  }}
+                  style={{ paddingVertical: 10 }}
+                >
+                  <Text>{exchange}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
           <Button onPress={onClose}>
             Cancel
@@ -426,7 +499,7 @@ const ValuatorFilterModal: React.FC<FilterModalProps> = ({ visible, onApply, onC
           </Button>
 
           <Button onPress={() => {
-            onApply({ industry_group, model, country });
+            onApply({ industry_group, model, country, exchange });
             onClose();
           }}>
             Apply
