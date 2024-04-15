@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextInput, Button, Checkbox } from 'react-native-paper';
@@ -14,6 +14,7 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'AppStack'>>();
+  const isMounted = useRef(false);
 
   useEffect(() => {
     const checkRememberMe = async () => {
@@ -36,10 +37,16 @@ function Login() {
       const keepLoggedInValue = await AsyncStorage.getItem('keepLoggedIn');
       if (keepLoggedInValue === 'true') {
         setKeepLoggedIn(true);
-        navigation.navigate('AppStack', { screen: 'Home' });
+        if (isMounted.current) {
+          navigation.navigate('AppStack', { screen: 'Home' });
+        }
       }
     };
     checkKeepLoggedIn();
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const handleSignIn = async () => {

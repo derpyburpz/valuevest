@@ -29,9 +29,11 @@ const Settings: React.FC<SettingsProps> = ({ visible, onClose }) => {
       .catch((error) => {
         console.error(error);
       });
-
+  
     await AsyncStorage.removeItem('access');
     await AsyncStorage.removeItem('refresh');
+    await AsyncStorage.removeItem('keepLoggedIn');
+  
     navigation.navigate('AuthStack', { screen: 'Login' });
   };
 
