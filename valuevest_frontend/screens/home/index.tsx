@@ -52,7 +52,7 @@ const Home = () => {
         }
       >
         <Container>
-          <PortfolioValue key={refreshKey} />
+          <PortfolioValue key={refreshKey} showAll={false}/>
         </Container>
         <Card style={{ marginHorizontal: 10, marginBottom: 10, backgroundColor: '#FFFFFF' }}>
           <Card.Content>

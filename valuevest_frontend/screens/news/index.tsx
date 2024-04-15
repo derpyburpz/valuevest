@@ -83,9 +83,17 @@ const News = () => {
 
   return (
     <>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
-        <Button onPress={() => setFilters([])}>Reset Filters</Button>
-        <Button onPress={openModal}>Open Filter</Button>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 7.5 }}>
+        <Button onPress={() => setFilters([])}>
+          <Text style={{ fontWeight: 'bold', fontSize: 15, textAlign: 'center' }}>
+            Reset Filters
+          </Text>
+        </Button>
+        <Button onPress={openModal}>
+          <Text style={{ fontWeight: 'bold', fontSize: 15, textAlign: 'center' }}>
+            Open Filters
+          </Text>
+        </Button>
       </View>
 
       {modalVisible && (
