@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Alert, Text, View, TouchableOpacity, RefreshControl, ScrollView, Image } from 'react-native';
+import { Alert, Text, View, TouchableOpacity, RefreshControl, ScrollView, Modal, TouchableWithoutFeedback } from 'react-native';
 import { API_BASE_URL, API_NEWS_KEY } from './../../config';
 import { DataTable } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,12 +8,21 @@ import { SwipeListView } from 'react-native-swipe-list-view';
 import Container from './../../components/atoms/container';
 import PortfolioValue from '../../components/organisms/portfoliovalue';
 import { Stock } from './../../types';
-import { RootStackParamList } from '../../nav/nav_stack';
+import StockInfoModal from '../../components/organisms/stockinfomodal';
 
 const Portfolio = () => {
   const [stocks, setStocks] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedStock, setSelectedStock] = useState<string | null>(null);
+
+  const handleStockPress = (ticker: string) => {
+    setSelectedStock(ticker);
+  };
+
+  const closeModal = () => {
+    setSelectedStock(null);
+  };
 
   const swipeListViewRef = useRef<SwipeListView<any> | null>(null);
   const rowRefsMap = useRef<Record<string, any>>({});
@@ -39,7 +48,8 @@ const Portfolio = () => {
         company_name: stock.company_name,
         exchange_ticker: stock.exchange_ticker,
         latest_price: stock.latest_price,
-        shares: stock.shares
+        shares: stock.shares,
+        price_change: stock.price_change
       })));
     } catch (error) {
       console.error(error);
@@ -86,15 +96,24 @@ const Portfolio = () => {
 
   const renderStock = (data: { item: Stock; index: number; }, rowMap: Record<string, any>) => {
     rowRefsMap.current[data.item.key] = rowMap[data.item.key];
-
+  
     return (
-      <View style={{ backgroundColor: 'white' }}>
-        <DataTable.Row>
-          <DataTable.Cell style={{ color: 'black', flex: 6 }}>{data.item.company_name}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.latest_price ? data.item.latest_price.toFixed(2) : 'N/A'}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.shares ? data.item.shares.toString() : 'N/A'}</DataTable.Cell>
-        </DataTable.Row>
-      </View>
+      <TouchableWithoutFeedback onPress={() => handleStockPress(data.item.exchange_ticker)}>
+        <View style={{ backgroundColor: 'white' }}>
+          <DataTable.Row>
+            <DataTable.Cell style={{ color: 'black', flex: 4.5 }}>{data.item.company_name.split('(')[0].trim()}</DataTable.Cell>
+            <DataTable.Cell numeric style={{ color: 'black', flex: 3 }}>{data.item.latest_price ? data.item.latest_price.toFixed(2) : 'N/A'}</DataTable.Cell>
+            <DataTable.Cell numeric style={{ color: 'black', flex: 3 }}>
+              {data.item.price_change ? (
+                parseFloat(data.item.price_change.toFixed(2)) > 0 ? `+${data.item.price_change.toFixed(2)}` : data.item.price_change.toFixed(2)
+              ) : (
+                'N/A'
+              )}
+            </DataTable.Cell>
+            <DataTable.Cell numeric style={{ color: 'black', flex: 2 }}>{data.item.shares ? data.item.shares.toString() : 'N/A'}</DataTable.Cell>
+          </DataTable.Row>
+        </View>
+      </TouchableWithoutFeedback>
     );
   };
 
@@ -145,7 +164,7 @@ const Portfolio = () => {
             />
           }
         >
-          <PortfolioValue key={refreshKey} />
+          <PortfolioValue key={refreshKey} showAll={true}/>
         </ScrollView>
       </Container>
       <SwipeListView
@@ -170,15 +189,19 @@ const Portfolio = () => {
             <View style={{ flex: 1, height: 0.1, backgroundColor: 'white' }} />
             <DataTable>
               <DataTable.Header>
-                <DataTable.Title style={{ flex: 5 }}>Company</DataTable.Title>
-                <DataTable.Title numeric style={{ flex: 2 }}>Last Price</DataTable.Title>
-                <DataTable.Title numeric style={{ flex: 1 }}>Shares</DataTable.Title>
+                <DataTable.Title style={{ flex: 4.5 }}>Company</DataTable.Title>
+                <DataTable.Title numeric style={{ flex: 3 }}>Current Price</DataTable.Title>
+                <DataTable.Title numeric style={{ flex: 3 }}>Change (%)</DataTable.Title>
+                <DataTable.Title numeric style={{ flex: 2 }}>Shares</DataTable.Title>
               </DataTable.Header>
             </DataTable>
           </>
         }
         ListFooterComponent={<></>}
       />
+      <Modal visible={!!selectedStock} onRequestClose={closeModal}>
+        {selectedStock && <StockInfoModal ticker={selectedStock} onClose={closeModal} />}
+      </Modal>
     </>
   );
 };

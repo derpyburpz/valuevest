@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
 from django.db.models import Count
+from django.db import transaction
 import yfinance as yf
 import math, time
 
@@ -94,7 +95,9 @@ class StockViewSet(viewsets.ModelViewSet):
             return Response(stock_details)
         else:
             return Response({'error': 'No company name provided'}, status=400)
-        
+
+
+
     ## ALL USERS ##
     @action(detail=False, methods=['delete'])
     def clear_stocks(self, request):
@@ -210,23 +213,25 @@ class StockViewSet(viewsets.ModelViewSet):
         portfolio_data = []
 
         for item in portfolio_items:
-            ticker = item.stock.exchange_ticker.split(':', 1)[1]
+            symbol = item.stock.exchange_ticker.split(':', 1)[1]
             try:
-                stock = yf.Ticker(ticker)  
+                stock = yf.Ticker(symbol)  
                 hist = stock.history(period="1d")
 
                 if not hist.empty and 'Close' in hist.columns:
                     latest_price = float(hist['Close'].iloc[0])
+                    price_change = ((latest_price - float(item.purchase_price)) / float(item.purchase_price)) * 100
                     
                     portfolio_data.append({
                         'company_name': item.stock.company_name,
                         'exchange_ticker': item.stock.exchange_ticker,
                         'shares': item.shares,
-                        'latest_price': latest_price
+                        'latest_price': latest_price,
+                        'price_change': price_change
                     })
 
             except Exception as e:
-                print(f"Error fetching {ticker}: {e}")
+                print(f"Error fetching {symbol}: {e}")
 
         return Response(portfolio_data)
 
@@ -236,9 +241,15 @@ class StockViewSet(viewsets.ModelViewSet):
         ticker = request.data.get('exchange_ticker')
         shares = request.data.get('shares')
 
-        user = User.objects.get(id=user_id)
-        stocks = Stock.objects.filter(exchange_ticker=ticker)
+        if not user_id or not ticker or not shares:
+            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        stocks = Stock.objects.filter(exchange_ticker=ticker)
         if not stocks.exists():
             return Response({'error': f'Stock with ticker {ticker} does not exist'}, status=status.HTTP_400_BAD_REQUEST)
         elif stocks.count() > 1:
@@ -246,7 +257,18 @@ class StockViewSet(viewsets.ModelViewSet):
 
         stock = stocks.first()
 
-        Portfolio.objects.create(user=user, stock=stock, shares=shares)
+        if Portfolio.objects.filter(user=user, stock=stock).exists():
+            return Response({'error': 'Stock already exists in the portfolio'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            symbol = ticker.split(':')[1].strip().upper()
+            stock_info = yf.Ticker(symbol).history(period="1d")
+            latest_price = float(stock_info['Close'].iloc[0])
+        except Exception as e:
+            return Response({'error': 'Failed to fetch stock price'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        with transaction.atomic():
+            Portfolio.objects.create(user=user, stock=stock, shares=shares, purchase_price=latest_price)
 
         return Response({'message': 'Stock added to portfolio'})
     
@@ -273,58 +295,46 @@ class StockViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Stock not found in portfolio'})
 
     @action(detail=False, methods=['get'])
-    def get_portfolio_value(self, request):
+    def get_portfolio_status(self, request):
         user_id = request.query_params.get('user_id')
         user = User.objects.get(id=user_id)
-
         portfolio_items = Portfolio.objects.filter(user=user)
+        
         portfolio_value = 0
-
-        for item in portfolio_items:
-            ticker = item.stock.exchange_ticker.split(':', 1)[1]
-            try:
-                # Call yfinance for each ticker
-                stock = yf.Ticker(ticker)  
-                hist = stock.history(period="1d")
-
-                if not hist.empty and 'Close' in hist.columns:
-                    current_price = float(hist['Close'].iloc[0])
-                    
-                    # Calculate the value of each stock and add it to the total portfolio value
-                    portfolio_value += item.shares * current_price
-
-            except Exception as e:
-                print(f"Error fetching {ticker}: {e}")
-
-        return Response({'portfolio_value': portfolio_value})
-
-    @action(detail=False, methods=['get'])
-    def get_portfolio_pnl(self, request):
-        user_id = request.query_params.get('user_id')
-        user = User.objects.get(id=user_id)
-
-        portfolio_items = Portfolio.objects.filter(user=user)
         total_pnl = 0
-
+        total_cost_basis = 0
+        total_market_value = 0
+        
         for item in portfolio_items:
-            ticker = item.stock.exchange_ticker.split(':', 1)[1]
+            symbol = item.stock.exchange_ticker.split(':', 1)[1]
             try:
-                # Call yfinance for each ticker
-                stock = yf.Ticker(ticker)  
-                hist = stock.history(period="1d")
-
-                if not hist.empty and 'Open' in hist.columns and 'Close' in hist.columns:
-                    open_price = float(hist['Open'].iloc[0])
-                    close_price = float(hist['Close'].iloc[0])
-
-                    # Calculate the P&L for this stock and add it to the total P&L
-                    pnl = (close_price - open_price) * item.shares
-                    total_pnl += pnl
-
+                stock_info = yf.Ticker(symbol)
+                hist = stock_info.history(period="1d")
+                if not hist.empty:
+                    if 'Close' in hist.columns:
+                        current_price = float(hist['Close'].iloc[0])
+                        purchase_price = float(item.purchase_price)
+                        market_value = item.shares * current_price
+                        cost_basis = item.shares * item.purchase_price
+                        
+                        portfolio_value += market_value
+                        total_market_value += market_value
+                        total_cost_basis += float(cost_basis)
+                        
+                        pnl = (current_price - purchase_price) * item.shares
+                        total_pnl += pnl
             except Exception as e:
-                print(f"Error fetching {ticker}: {e}")
-
-        return Response({'total_pnl': total_pnl})
+                print(f"Error fetching {symbol}: {e}")
+        
+        overall_performance = (total_market_value - float(total_cost_basis))
+        
+        return Response({
+            'portfolio_value': portfolio_value,
+            'total_pnl': total_pnl,
+            'total_cost_basis': total_cost_basis,
+            'total_market_value': total_market_value,
+            'overall_performance': overall_performance
+        })
     
     @action(detail=False, methods=['delete'])
     def clear_portfolio_by_id(self, request):
@@ -452,6 +462,8 @@ class StockViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def get_stock_details(self, request):
         ticker = request.query_params.get('ticker', None)
+        user_id = request.query_params.get('user_id', None)
+
         if ticker is None:
             return Response({'error': 'Ticker parameter missing.'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -467,13 +479,13 @@ class StockViewSet(viewsets.ModelViewSet):
 
             try:
                 net_income = income_stmt.at['Net Income', income_stmt.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 net_income = "Not found"
 
             try:
                 shareholders_equity = balance_sheet.at['Stockholders Equity', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 shareholders_equity = "Not found"
 
@@ -481,13 +493,13 @@ class StockViewSet(viewsets.ModelViewSet):
 
             try:
                 total_assets = balance_sheet.at['Total Assets', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 total_assets = "Not found"
 
             try:
                 total_liabilities = balance_sheet.at['Total Liabilities Net Minority Interest', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 total_liabilities = "Not found"
 
@@ -495,74 +507,75 @@ class StockViewSet(viewsets.ModelViewSet):
 
             try:
                 shares_outstanding = yf_stock.info['sharesOutstanding'] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 shares_outstanding = "Not found"
 
             try:
-                stock_price = yf_stock.info['currentPrice']
+                stock_info = yf_stock.history(period="1d")
+                latest_price = float(stock_info['Close'].iloc[0])
             except:
-                stock_price = "Not found"
+                latest_price = "Not found"
 
-            market_cap = stock_price * shares_outstanding if (stock_price != "Not found") and (shares_outstanding != "Not found") and not math.isnan(shares_outstanding) and shares_outstanding != 0 else "Not found"
+            market_cap = latest_price * shares_outstanding if (latest_price != "Not found") and (shares_outstanding != "Not found") and not math.isnan(shares_outstanding) and shares_outstanding != 0 else "Not found"
 
             try:
                 total_debt = balance_sheet.at['Total Debt', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 total_debt = "Not found"
 
             try:
                 enterprise_value = yf_stock.info['enterpriseValue'] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 enterprise_value = "Not found"
 
             try:
                 revenue = income_stmt.at['Total Revenue', income_stmt.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 revenue = "Not found"
 
             try:
                 ebitda = yf_stock.info['ebitda'] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 ebitda = "Not found"
 
             try:
                 ebit = income_stmt.at['Ebit', income_stmt.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 ebit = "Not found"
 
             try:
                 free_cash_flow = cashflow_stmt.at['Free Cash Flow', cashflow_stmt.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 free_cash_flow = "Not found"
 
             try:
                 operating_cash_flow = cashflow_stmt.at['Total Cash From Operating Activities', cashflow_stmt.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 operating_cash_flow = "Not found"
 
             try:
                 current_assets = balance_sheet.at['Total Current Assets', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 current_assets = "Not found"
 
             try:
                 current_liabilities = balance_sheet.at['Total Current Liabilities', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 current_liabilities = "Not found"
 
             try:
                 inventory = balance_sheet.at['Inventory', balance_sheet.columns[0]] / 1000000
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 inventory = "Not found"
 
@@ -573,25 +586,25 @@ class StockViewSet(viewsets.ModelViewSet):
 
             try:
                 earnings_yield = yf_stock.info['earningsYield']
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 earnings_yield = "Not found"
 
             try:
                 dividend_yield = yf_stock.info['dividendYield']
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 dividend_yield = "Not found"
 
             try:
                 payout_ratio = yf_stock.info['payoutRatio']
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 payout_ratio = "Not found"
 
             try:
                 buyback_yield = yf_stock.info['buybackYield']
-                time.sleep(0.1)
+                time.sleep(0.05)
             except:
                 buyback_yield = "Not found"
 
@@ -601,7 +614,7 @@ class StockViewSet(viewsets.ModelViewSet):
                 'sector': stock_model.primary_sector,
                 'industry_group': stock_model.industry_group,
                 'country': stock_model.country,
-                'current_price': float(yf_stock.info['previousClose']),
+                'current_price': latest_price,
                 'high_price': yf_stock.info.get('dayHigh', "Not found"),
                 'low_price': yf_stock.info.get('dayLow', "Not found"),
                 'market_cap': market_cap,
@@ -629,8 +642,23 @@ class StockViewSet(viewsets.ModelViewSet):
                 'dividend_yield': dividend_yield,
                 'payout_ratio': payout_ratio,
                 'buyback_yield': buyback_yield,
-                'total_return': (stock_price + dividend_yield) / stock_price - 1 if (stock_price != "Not found") and (dividend_yield != "Not found") else "Not found",
+                'total_return': (latest_price + dividend_yield) / latest_price - 1 if (latest_price != "Not found") and (dividend_yield != "Not found") else "Not found",
             }
+
+            if user_id is not None:
+                try:
+                    portfolio_item = Portfolio.objects.get(user_id=user_id, stock=stock_model)
+                    stock_details['purchase_price'] = float(portfolio_item.purchase_price)
+                    stock_details['shares'] = float(portfolio_item.shares)
+                    raw_price_change = latest_price - float(portfolio_item.purchase_price)
+                    stock_details['raw_price_change'] = raw_price_change
+                    stock_details['price_change'] = (raw_price_change / float(portfolio_item.purchase_price)) * 100
+
+                except Portfolio.DoesNotExist:
+                    stock_details['purchase_price'] = None
+                    stock_details['shares'] = None
+                    stock_details['raw_price_change'] = None
+                    stock_details['price_change'] = None
 
             return Response(stock_details)
 

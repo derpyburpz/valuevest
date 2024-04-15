@@ -1,39 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View, Alert } from 'react-native';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { Card, Title, Paragraph, Subheading, Divider, ActivityIndicator, List } from 'react-native-paper';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { Stock } from '../../types';
-import { RootStackParamList } from '../../nav/nav_stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type StockInfoScreenNavigationProp = StackNavigationProp<RootStackParamList, 'StockInfo'>;
-type StockInfoScreenRouteProp = RouteProp<RootStackParamList, 'StockInfo'>;
+type PortfolioStockModalProps = {
+  ticker: string;
+  onClose: () => void;
+};
 
-const StockInfo: React.FC = () => {
-  const navigation = useNavigation<StockInfoScreenNavigationProp>();
-  const route = useRoute<StockInfoScreenRouteProp>();
-  const { ticker } = route.params;
+const StockInfoModal: React.FC<PortfolioStockModalProps> = ({ ticker, onClose }) => {
   const [stock, setStock] = useState<Stock | null>(null);
   const [loading, setLoading] = useState(true);
 
-  console.log('Received ticker in StockInfo screen:', ticker);
   useEffect(() => {
     fetchStockDetails();
   }, []);
 
-  const fetchStockDetails = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/stocks/get_stock_details/?ticker=${ticker}`);
-      setStock(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to fetch stock details. Please try again later.');
-      setLoading(false);
-    }
-  };
+	const fetchStockDetails = async () => {
+		try {
+			const user_id = await AsyncStorage.getItem('user_id');
+			const response = await axios.get(`${API_BASE_URL}/stocks/get_stock_details/?ticker=${ticker}&user_id=${user_id}`);
+			setStock(response.data);
+			setLoading(false);
+		} catch (error) {
+			console.error(error);
+			Alert.alert('Error', 'Failed to fetch stock details. Please try again later.');
+			setLoading(false);
+		}
+	};
 
   if (loading) {
     return (
@@ -68,7 +65,48 @@ const StockInfo: React.FC = () => {
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Sector: {stock.sector}</Paragraph>
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Industry: {stock.industry_group}</Paragraph>
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Country: {stock.country}</Paragraph>
+					{stock.purchase_price && (
+            <Paragraph style={{ fontWeight: "bold", paddingTop: 10, fontSize: 15, color: '#74278E' }}>
+              Purchase Price: ${stock.purchase_price.toFixed(2)}
+            </Paragraph>
+          )}
+					{stock.shares && (
+            <Paragraph style={{ fontWeight: "bold", paddingTop: 10, fontSize: 15, color: '#74278E' }}>
+              Shares Purchased: {stock.shares}
+            </Paragraph>
+          )}
+
           <Paragraph style={{ fontWeight: "bold", paddingTop: 10, fontSize: 15, color: '#74278E' }}>Current Price: ${stock.current_price.toFixed(2)}</Paragraph>
+					
+					{stock.price_change && (
+						<Paragraph
+							style={{
+								fontWeight: "bold",
+								paddingTop: 10,
+								fontSize: 15,
+								color: '#74278E',
+							}}
+						>
+							Price Change (%): {parseFloat(stock.price_change.toFixed(2)) > 0 ? `+${stock.price_change.toFixed(2)}` : stock.price_change.toFixed(2)}
+						</Paragraph>
+					)}
+					{stock.raw_price_change && (
+						<Paragraph
+							style={{
+								fontWeight: "bold",
+								paddingTop: 10,
+								fontSize: 15,
+								color: '#74278E',
+							}}
+						>
+							Price Change:{' '}
+							{parseFloat(stock.raw_price_change.toFixed(2)) > 0
+								? `+$${stock.raw_price_change.toFixed(2)}`
+								: parseFloat(stock.raw_price_change.toFixed(2)) < 0
+								? `-$${Math.abs(parseFloat(stock.raw_price_change.toFixed(2)))}`
+								: `$${stock.raw_price_change.toFixed(2)}`}
+						</Paragraph>
+					)}
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Last High Price: ${stock.high_price}</Paragraph>
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Last Low Price: ${stock.low_price}</Paragraph>
           <Paragraph style={{ paddingTop: 10, fontSize: 15 }}>Market Cap: ${stock.market_cap.toFixed(0)} million</Paragraph>
@@ -231,4 +269,4 @@ const StockInfo: React.FC = () => {
   );
 };
 
-export default StockInfo;
+export default StockInfoModal;

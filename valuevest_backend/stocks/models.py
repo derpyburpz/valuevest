@@ -28,6 +28,7 @@ class Portfolio(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
     shares = models.IntegerField()
+    purchase_price = models.DecimalField(max_digits=30, decimal_places=10, default = 0)
 
 class Watchlist(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

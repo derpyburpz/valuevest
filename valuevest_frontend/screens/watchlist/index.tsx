@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Alert, Text, View, TouchableOpacity, RefreshControl, ScrollView, Image } from 'react-native';
+import { Alert, Text, View, TouchableWithoutFeedback, RefreshControl, TouchableOpacity, Modal } from 'react-native';
 import { API_BASE_URL, API_NEWS_KEY } from './../../config';
 import { DataTable } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,10 +10,12 @@ import BottomTabs from './../../nav/bottomtabs';
 import { Stock } from './../../types';
 import Container from './../../components/atoms/container';
 import RefreshWatchlistContext from './../../components/contexts/refreshWatchlist';
+import StockInfoModal from '../../components/organisms/stockinfomodal';
 
 const Watchlist = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const swipeListViewRef = useRef<SwipeListView<any> | null>(null);
   const rowRefsMap = useRef<Record<string, any>>({});
@@ -34,7 +36,6 @@ const Watchlist = () => {
       })));
     } catch (error) {
       console.error(error);
-      
     }
     setRefreshing(false);
   };
@@ -57,6 +58,14 @@ const Watchlist = () => {
       Alert.alert('Error', 'Failed to remove stock. Please check your network connection and try again.');
     }
   };
+
+  const handleStockPress = (ticker: string) => {
+    setSelectedStock(ticker);
+  };
+
+  const closeModal = () => {
+    setSelectedStock(null);
+  };
   
   useEffect(() => {
     fetchWatchlist();
@@ -66,12 +75,14 @@ const Watchlist = () => {
     rowRefsMap.current[data.item.key] = rowMap[data.item.key];
   
     return (
-      <View style={{ backgroundColor: 'white' }}>
-        <DataTable.Row>
-          <DataTable.Cell style={{ color: 'black', flex: 3.5 }}>{data.item.company_name}</DataTable.Cell>
-          <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.latest_price.toFixed(2)}</DataTable.Cell>
-        </DataTable.Row>
-      </View>
+      <TouchableWithoutFeedback onPress={() => handleStockPress(data.item.exchange_ticker)}>
+        <View style={{ backgroundColor: 'white' }}>
+          <DataTable.Row>
+            <DataTable.Cell style={{ color: 'black', flex: 3.5 }}>{data.item.company_name}</DataTable.Cell>
+            <DataTable.Cell numeric style={{ color: 'black', flex: 1 }}>{data.item.latest_price.toFixed(2)}</DataTable.Cell>
+          </DataTable.Row>
+        </View>
+      </TouchableWithoutFeedback>
     );
   };
 
@@ -98,7 +109,7 @@ const Watchlist = () => {
               { 
                 text: "OK", onPress: () => {
                 removeStock(data.item.exchange_ticker); 
-                closeAllOpenRows;
+                closeAllOpenRows();
                 }
               }
             ]
@@ -110,43 +121,43 @@ const Watchlist = () => {
     </View>
   );
 
-return (
-  <RefreshWatchlistContext.Provider value={fetchWatchlist}>
-    <Container>
-      <SwipeListView
-        data={stocks}
-        renderItem={renderStock}
-        renderHiddenItem={renderHiddenItem}
-        rightOpenValue={-75}
-        disableRightSwipe={true}
-        previewRowKey={'0'}
-        previewOpenValue={-40}
-        previewOpenDelay={3000}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={fetchWatchlist}
-          />
-        }
-        ref={swipeListViewRef}
-        keyExtractor={(item) => item.key}
-        ListHeaderComponent={
-          <>
-            <DataTable>
-              <DataTable.Header>
-                <DataTable.Title>Stock</DataTable.Title>
-                <DataTable.Title numeric>Last Price</DataTable.Title>
-              </DataTable.Header>
-            </DataTable>
-          </>
-        }
-        ListFooterComponent={
-          <>
-          </>
-        }
-      />
-    </Container>
-  </RefreshWatchlistContext.Provider>
+  return (
+    <RefreshWatchlistContext.Provider value={fetchWatchlist}>
+      <Container>
+        <SwipeListView
+          data={stocks}
+          renderItem={renderStock}
+          renderHiddenItem={renderHiddenItem}
+          rightOpenValue={-75}
+          disableRightSwipe={true}
+          previewRowKey={'0'}
+          previewOpenValue={-40}
+          previewOpenDelay={3000}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={fetchWatchlist}
+            />
+          }
+          ref={swipeListViewRef}
+          keyExtractor={(item) => item.key}
+          ListHeaderComponent={
+            <>
+              <DataTable>
+                <DataTable.Header>
+                  <DataTable.Title>Stock</DataTable.Title>
+                  <DataTable.Title numeric>Current Price</DataTable.Title>
+                </DataTable.Header>
+              </DataTable>
+            </>
+          }
+          ListFooterComponent={<></>}
+        />
+      </Container>
+      <Modal visible={!!selectedStock} onRequestClose={closeModal}>
+        {selectedStock && <StockInfoModal ticker={selectedStock} onClose={closeModal} />}
+      </Modal>
+    </RefreshWatchlistContext.Provider>
   );
 };
 

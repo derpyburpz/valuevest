@@ -13,6 +13,7 @@ export const containerStyle = StyleSheet.create({
     elevation: 5,
     marginHorizontal: 10,
     marginVertical: 10,
+    paddingBottom: 10
   },
   containerTitle: {
     fontSize: 24,
@@ -40,22 +41,26 @@ export const containerStyle = StyleSheet.create({
   },
   containerTextBold: {
     fontWeight: 'bold',
-    fontSize: 35,
+    fontSize: 30,
     marginLeft: 15,
   },
   containerTextGreen: {
     color: 'limegreen',
     fontSize: 26,
     fontWeight: 'bold',
-    marginLeft: 15,
-    marginBottom: 10,
+    marginLeft: 10,
   },
   containerTextRed: {
     color: 'red',
     fontSize: 26,
     fontWeight: 'bold',
     marginLeft: 10,
-    marginBottom: 10,
+  },
+  containerTextBlack: {
+    color: 'black',
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   icon: {
     marginLeft: 15,

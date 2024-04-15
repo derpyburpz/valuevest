@@ -74,9 +74,11 @@ export type Stock = {
   discounted_excess_returns: number;
   count: number;
   price_change: number;
+  raw_price_change: number;
   latest_price: number;
   shares: number;
   key: string;
+  purchase_price: number;
 };
 
 export interface Article {
