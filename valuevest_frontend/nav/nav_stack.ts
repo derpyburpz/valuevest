@@ -8,7 +8,7 @@ export type RootStackParamList = {
   Search: undefined;
   Login: undefined;
   Signup: undefined;
-  StockInfo: { ticker: string; };
+  StockInfo: { ticker: string; key: string };
   AuthSplash: undefined;
   AuthStack: { screen: string; };
   AppStack: { screen: string; };

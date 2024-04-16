@@ -39,11 +39,11 @@ const SearchStockModal: React.FC<SearchStockModalProps> = ({ visible, onClose })
     if (item.id) {
       return (
         <Card
-        onPress={() => {
-          console.log('Selected ticker:', item.exchange_ticker);
-          navigation.navigate('StockInfo', { ticker: item.exchange_ticker });
-          onClose();
-        }}
+          onPress={() => {
+            console.log('Selected ticker:', item.exchange_ticker);
+            navigation.navigate('StockInfo', { ticker: item.exchange_ticker, key: item.exchange_ticker });
+            onClose();
+          }}
         >
           <Card.Content>
             <Title>{item.company_name}</Title>

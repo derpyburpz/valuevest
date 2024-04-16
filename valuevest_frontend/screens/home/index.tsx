@@ -19,6 +19,8 @@ const Home = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
   const openArticle = (url: string) => {
     Linking.openURL(url);
   };
@@ -59,6 +61,9 @@ const Home = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
               <Ionicons name="newspaper-outline" size={24} color="black" style={{ marginRight: 10 }} />
               <Title style={{ fontWeight: 'bold' }}>Trending Market News</Title>
+              <TouchableOpacity onPress={() => navigation.navigate('News')}>
+                <Ionicons name="arrow-forward" size={35} color="black" style={{ marginLeft: 63 }} />
+              </TouchableOpacity>
             </View>
             <Divider style={{ marginVertical: 6 }} />
             {articles.slice(0, 20).map((article, index) => (
