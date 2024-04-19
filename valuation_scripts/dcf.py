@@ -21,13 +21,12 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
         df = pd.read_excel(xlsx, sheet_name=2, index_col=0)
         ocf = df.loc['Operating Cash Flow'][:NUMBER_OF_YEARS][::-1]
 
-    if (past_revenues is None or past_revenues.isnull().any()) or (ocf is None or ocf.isnull().any()) or \
-        (past_revenues == 0).any() or (len(past_revenues) != len(ocf)):
+    if (past_revenues is None or past_revenues.isnull().any()) or (ocf is None or ocf.isnull().any()) or (past_revenues == 0).any() or (len(past_revenues) != len(ocf)):
         try:
             past_revenues = income_stmt.loc['Total Revenue'][::-1] / 1000000
-            time.sleep(0.1)
+            time.sleep(0.05)
             ocf = cash_flow.loc['Operating Cash Flow'][::-1] / 1000000
-            time.sleep(0.1)
+            time.sleep(0.05)
         except Exception as e:
             raise Exception("Missing revenue or ocf data")
 
@@ -46,7 +45,6 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     print(f'Average ocf margin is: {average_ocf_margin}.')
 
 
-
     ### Calculating Average Capital Expenditure (capex) Margin ###
     capex = None
     past_revenues = None
@@ -59,9 +57,9 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     if (past_revenues is None or past_revenues.isnull().any()) or (capex is None or capex.isnull().any()) or (len(past_revenues) != len(capex)):
         try:
             capex = cash_flow.loc['Capital Expenditure'][::-1] / 1000000
-            time.sleep(0.1)    
+            time.sleep(0.05)    
             past_revenues = income_stmt.loc['Total Revenue'][::-1] / 1000000
-            time.sleep(0.1)
+            time.sleep(0.05)
         except Exception as e:
             raise Exception("Missing revenue or capex data")
         
@@ -79,14 +77,13 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     print(f'Average capex margin is: {average_capex_margin}.')
 
 
-
     ### Calculating Discount Rate (WACC/Cost of Capital) ###
     market_cap = None
     if stock_price is not None:
         try:
             shares_outstanding = None
             shares_outstanding = stock.info['sharesOutstanding'] / 1000000
-            time.sleep(0.1)
+            time.sleep(0.05)
             if shares_outstanding is not None or not math.isnan(shares_outstanding) or shares_outstanding != 0:
                 market_cap = stock_price * shares_outstanding
             else:
@@ -113,7 +110,7 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     total_debt = None
     try:
         total_debt = balance_sheet.at['Total Debt', balance_sheet.columns[0]] / 1000000
-        time.sleep(0.1)
+        time.sleep(0.05)
         if total_debt is None or math.isnan(total_debt) or total_debt == 0:
             raise Exception("Missing total debt data")
     except Exception as e:
@@ -130,7 +127,7 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     interest_expense = None
     try:
         interest_expense = income_stmt.at['Interest Expense', income_stmt.columns[0]] / 1000000
-        time.sleep(0.1)
+        time.sleep(0.05)
         if interest_expense is None or math.isnan(interest_expense) or interest_expense == 0:
             raise Exception("Missing total interest expense data")
         print(f"Data obtained from yfinance.")
@@ -151,17 +148,16 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     tax_rate = None
     try:
         tax_rate = financials_sorted['Tax Rate For Calcs'].iloc[0]
-        time.sleep(0.1)
+        time.sleep(0.05)
         if tax_rate is None or math.isnan(tax_rate) or tax_rate == 0:
             raise Exception("Missing tax rate data")
     except Exception as e:
         try:
             tax_provision = income_stmt.at['Tax Provision', income_stmt[0]] / 1000000       # Income Tax Expense
-            time.sleep(0.1)
+            time.sleep(0.05)
             pretax_income = income_stmt.at['Pretax Income', income_stmt[0]] / 1000000
-            time.sleep(0.1)
-            if (tax_provision is not None and not math.isnan(tax_provision)) and (pretax_income is not None and \
-                not math.isnan(pretax_income)) and (pretax_income != 0 and tax_provision != 0):
+            time.sleep(0.05)
+            if (tax_provision is not None and not math.isnan(tax_provision)) and (pretax_income is not None and not math.isnan(pretax_income)) and (pretax_income != 0 and tax_provision != 0):
                 tax_rate = tax_provision / pretax_income
         except Exception as e:
             if os.path.exists(filepath): 
@@ -171,6 +167,8 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     
     if tax_rate is None or math.isnan(tax_rate) or tax_rate == 0:
         raise Exception("Missing tax rate")
+    # else:
+    #     print(f"The tax rate is {tax_rate}")
 
     debt_weight = total_debt / (market_cap + total_debt)
     equity_weight = 1 - debt_weight
@@ -180,29 +178,57 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
     print(f"The WACC is {wacc}")
 
 
-
     ### Forecasting Revenue using Linear Regression ###
     past_revenues = past_revenues.dropna()
     years = np.array(range(1, len(past_revenues) + 1)).reshape(-1, 1)
 
-    model = LinearRegression()
-    model.fit(years, past_revenues)
+    train_data = past_revenues[:-2]
+    validation_data = past_revenues[-2:]
 
+    X_train = np.array(range(1, len(train_data) + 1)).reshape(-1, 1)
+    model = LinearRegression()
+    model.fit(X_train, train_data)
+
+    # Generating the validation period
+    X_validation = np.array(range(len(train_data) + 1, len(past_revenues) + 1)).reshape(-1, 1)
+    forecasted_values = model.predict(X_validation)
+    forecast_errors = validation_data - forecasted_values
+
+    # Mean Absolute Error or Root Mean Squared Error for error margin
+    mae = np.mean(np.abs(forecast_errors))
+    # rmse = np.sqrt(np.mean(forecast_errors**2))
+    error_margin = mae
+
+    # Forecast revenue for the next 5 years
     next_years = np.array(range(len(past_revenues) + 1, len(past_revenues) + 6)).reshape(-1, 1)
     predicted_revenues = model.predict(next_years)
 
-    print(f"The predicted revenues are:\n{predicted_revenues}")
-    # for i, revenue in enumerate(predicted_revenues, start=len(past_revenues) + 1):
-    #     print(f"The predicted revenue for year {i} is {revenue}")
+    # print(f"The predicted revenues are:\n{predicted_revenues}")
     
     negative_revenues = False
     if any(revenue < 0 for revenue in predicted_revenues):
         model = SimpleExpSmoothing(past_revenues)
         model_fit = model.fit()
-        predicted_revenues = model_fit.predict(start=len(past_revenues), end=len(past_revenues) + 4)
-        negative_revenues = True
+        
+        # Generating the validation period for negative revenue forecasts
+        validation_forecasts = model_fit.predict(start=len(train_data), end=len(past_revenues) - 1)
+        validation_data = past_revenues[-len(validation_forecasts):]
+        forecast_errors_exp = validation_data - validation_forecasts
 
-        print(f'Negative revenues, exponential smoothing predicted revenues are:\n{predicted_revenues}')
+        # Mean Absolute Error or Root Mean Squared Error for error margin
+        mae = np.mean(np.abs(forecast_errors_exp))
+        # rmse = np.sqrt(np.mean(forecast_errors_exp**2))
+        error_margin = mae
+        
+        predicted_revenues = model_fit.predict(start=len(past_revenues), end=len(past_revenues) + 4)
+
+        # print(f'Negative revenues, exponential smoothing predicted revenues are:\n{predicted_revenues}')
+        negative_revenues = True
+        percentage_error_margin = (error_margin / np.mean(validation_data))
+        print(f'Error margin for exponential smoothing: {percentage_error_margin}')
+    else:
+        percentage_error_margin = (error_margin / np.mean(validation_data))
+        print(f'Error margin for linear regression: {percentage_error_margin}')
 
     if predicted_revenues is None or np.isnan(predicted_revenues).any():
         raise Exception("Missing predicted revenue data")
@@ -215,20 +241,11 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
         projected_FCFF.append(FCFF)
 
     print(f"The projected free cash flows are:\n{projected_FCFF}")
-    # for i, FCFF in enumerate(projected_FCFF, start=len(past_revenues) + 1):
-    #     print(f"The projected free cash flow for year {i} is {FCFF}")
-
-
 
     ### Discounting Unlevered Free Cash Flow to Firm (FCFF) ###
     # Calculate the present value of each year's free cash flow
-    discounted_FCFF = [fcff / ((1 + wacc) ** year) for year, fcff in enumerate(projected_FCFF, start=1)]
-    print(f"The discounted free cash flows are:\n{discounted_FCFF}")
-
-    # for i, discounted_FCFF_i in enumerate(discounted_FCFF, start=1):
-    #     print(f"The discounted free cash flow for year {i} is {discounted_FCFF_i}")
-
-
+    discounted_FCFF = projected_FCFF / (1 + wacc)**(np.arange(1, len(projected_FCFF)+1))
+    # print(f"The discounted free cash flows are:\n{discounted_FCFF}")
 
     ### Calculating the Discounted Terminal Value at the end of the projection period ###
     terminal_value = projected_FCFF[-1] * (1 + DCF_GROWTH_RATE) / (wacc - DCF_GROWTH_RATE)
@@ -241,15 +258,17 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
 
     ### Calculating the Enterprise Value ###
     enterprise_value = sum(discounted_FCFF) + discounted_terminal_value
-    print(f"The Enterprise Value is {enterprise_value}")
 
+    # lower_bound_ev = enterprise_value - error_margin
+    # upper_bound_ev = enterprise_value + error_margin
+    # print(f"The Enterprise Value is {enterprise_value} (Range: {lower_bound_ev} to {upper_bound_ev})")
 
 
     ### Calculate Equity Value ###
     cash_and_cash_equivalents = None
     try:
         cash_and_cash_equivalents = balance_sheet.at['Cash Cash Equivalents And Short Term Investments', balance_sheet.columns[0]] / 1000000
-        time.sleep(0.1)
+        time.sleep(0.05)
     except Exception as e:
         if os.path.exists(filepath):
             cash_and_equivalents = get_first_numeric_value(dfs, 1, 'Cash & Equivalents')
@@ -262,7 +281,7 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
                 raise Exception("Missing cash and cash equivalents data")
         else:
             raise Exception("Missing cash and cash equivalents data")
-    time.sleep(0.1)
+    time.sleep(0.05)
 
     if cash_and_cash_equivalents is None or math.isnan(cash_and_cash_equivalents):
         raise Exception("Missing cash and cash equivalents data")
@@ -272,35 +291,41 @@ def dcf(symbol, stock_price, balance_sheet, income_stmt, cash_flow, financials_s
 
     ### Intrinsic Value Calculation ###
     intrinsic_value_per_share = equity_value / shares_outstanding
-    print(f"The intrinsic value of {symbol} is {intrinsic_value_per_share}\n")
+    lower_bound_iv = intrinsic_value_per_share - error_margin
+    upper_bound_iv = intrinsic_value_per_share + error_margin
+
+    print(f"The intrinsic value of {symbol} is {intrinsic_value_per_share} (Range: {lower_bound_iv} to {upper_bound_iv})\n")
 
     workbook = openpyxl.load_workbook('valuation.xlsx')
     worksheet = workbook.active
     next_row = worksheet.max_row + 1
 
     worksheet.cell(row=next_row, column=1, value=exchange_ticker)
-    worksheet.cell(row=next_row, column=2, value=intrinsic_value_per_share)
+    worksheet.cell(row=next_row, column=2, value=percentage_error_margin)
+    cell = worksheet.cell(row=next_row, column=2)
+    cell.number_format = '0.00%'
+    # worksheet.cell(row=next_row, column=2, value=error_margin)
+    worksheet.cell(row=next_row, column=3, value=intrinsic_value_per_share) 
     if stock_price is not None:
-        worksheet.cell(row=next_row, column=3, value=stock_price)
+        worksheet.cell(row=next_row, column=4, value=stock_price)
     if (stock_price is not None) and (intrinsic_value_per_share is not None):
         percentage_change = ((intrinsic_value_per_share - stock_price) / stock_price)
-        cell = worksheet.cell(row=next_row, column=4, value=percentage_change)
+        cell = worksheet.cell(row=next_row, column=5, value=percentage_change)
         cell.number_format = '0.00%'
     if negative_revenues:
-        worksheet.cell(row=next_row, column=5, value='DCF (Negative Revenues)')
+        worksheet.cell(row=next_row, column=6, value='DCF (Negative Revenues)')
     else:
-        worksheet.cell(row=next_row, column=5, value='DCF')
-    worksheet.cell(row=next_row, column=6, value=wacc)
-
-    worksheet.cell(row=next_row, column=7, value=enterprise_value)
-    worksheet.cell(row=next_row, column=8, value=equity_value)
-    worksheet.cell(row=next_row, column=9, value=terminal_value)
-    worksheet.cell(row=next_row, column=10, value=discounted_terminal_value)
+        worksheet.cell(row=next_row, column=6, value='DCF')
+    worksheet.cell(row=next_row, column=7, value=wacc)
+    worksheet.cell(row=next_row, column=8, value=enterprise_value)
+    worksheet.cell(row=next_row, column=9, value=equity_value)
+    worksheet.cell(row=next_row, column=10, value=terminal_value)
+    worksheet.cell(row=next_row, column=11, value=discounted_terminal_value)
+    discounted_FCFF_str = ", ".join(map(str, discounted_FCFF.tolist()))
+    worksheet.cell(row=next_row, column=12, value=discounted_FCFF_str)
 
     workbook.save('valuation.xlsx')
     with open('processed.log', 'a') as f:
         f.write(symbol + '\n')
 
     return intrinsic_value_per_share
-
-    # worksheet.cell(row=next_row, column=6, value=discounted_FCFF)
