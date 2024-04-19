@@ -76,29 +76,28 @@ def erm(symbol, stock_price, balance_sheet, income_stmt, xlsx, dfs, COST_OF_EQUI
 
     # Forecasting Retained Earnings
     retained_earnings_values = None
+
     try:
         if os.path.exists(filepath):
             print('Using Retained Values from DFS.')
             retained_earnings_values = []
-            df = pd.read_excel(xlsx, sheet_name=1, index_col=0)        
+            df = pd.read_excel(xlsx, sheet_name=1, index_col=0)
             retained_earnings_values = df.loc['Retained Earnings'][:NUMBER_OF_YEARS][::-1]
-
-            if retained_earnings_values is None or retained_earnings_values.isnull().any() or retained_earnings_values.empty:
-                raise Exception("Missing Retained Earnings or Shares Outstanding data")
         else:
             raise Exception("No excel data found for Retained Earnings or Shares Outstanding")
+            
         if retained_earnings_values is None or retained_earnings_values.isnull().any() or retained_earnings_values.empty:
             raise Exception("Missing Retained Earnings or Shares Outstanding data")
+            
     except Exception as e:
         try:
             retained_earnings_values = balance_sheet.loc['Retained Earnings'][::-1] / 1000000
             time.sleep(0.05)
         except Exception as e:
             raise Exception("Missing Retained Earnings or Shares Outstanding data")
-
+            
     if retained_earnings_values is None or retained_earnings_values.isnull().any() or retained_earnings_values.empty:
         raise Exception("Missing Retained Earnings or Shares Outstanding data")
-
 
     # Forecasting Retained Earnings for the next 15 years (High Growth Period + Stable Growth Period)
     retained_earnings_values = retained_earnings_values.dropna()
@@ -108,10 +107,6 @@ def erm(symbol, stock_price, balance_sheet, income_stmt, xlsx, dfs, COST_OF_EQUI
     model = LinearRegression()
     model.fit(X, y)
 
-    forecast_period = HIGH_GROWTH_PERIOD + STABLE_GROWTH_PERIOD
-    X_forecast = np.array(range(len(retained_earnings_values), len(retained_earnings_values) + forecast_period)).reshape(-1, 1)
-    forecasted_retained_earnings = model.predict(X_forecast)
-    
     train_data = retained_earnings_values[:len(retained_earnings_values) - 2]
     validation_data = retained_earnings_values[-2:]
 
@@ -124,12 +119,14 @@ def erm(symbol, stock_price, balance_sheet, income_stmt, xlsx, dfs, COST_OF_EQUI
     # Generating the validation period
     X_validation = np.array(range(len(train_data), len(retained_earnings_values))).reshape(-1, 1)
     forecasted_values = model.predict(X_validation)
+
     forecast_errors = validation_data - forecasted_values
 
     # Mean Absolute Error or Root Mean Squared Error for error margin
     mae = np.mean(np.abs(forecast_errors))
     # rmse = np.sqrt(np.mean(forecast_errors**2))
     error_margin = mae
+
     percentage_error_margin = (error_margin / np.mean(validation_data))
     print(f'Error margin for linear regression: {percentage_error_margin}')
 
